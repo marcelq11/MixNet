@@ -155,38 +155,32 @@ def visualize_detection(image, output_dict, meta=None):
     image_show = image.copy()
     image_show = np.ascontiguousarray(image_show[:, :, ::-1])
 
-    cls_preds = F.interpolate(output_dict["fy_preds"], scale_factor=cfg.scale, mode='bilinear')
-    cls_preds = cls_preds[0].data.cpu().numpy()
-
     py_preds = output_dict["py_preds"][1:]
     init_polys = output_dict["py_preds"][0]
-    shows = []
+    bounding_boxes = []
 
     if cfg.mid:
         midline = output_dict["midline"]
 
     init_py = init_polys.data.cpu().numpy()
-    path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
-                        meta['image_id'][0].split(".")[0] + "_init.png")
 
-    im_show0 = image_show.copy()
+    # Visualize initial polygons
+    im_show = image_show.copy()
     for i, bpts in enumerate(init_py.astype(np.int32)):
-        cv2.drawContours(im_show0, [bpts.astype(np.int32)], -1, (255, 0, 255), 2)
+        cv2.drawContours(im_show, [bpts.astype(np.int32)], -1, (255, 0, 255), 2)
         for j, pp in enumerate(bpts):
             if j == 0:
-                cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (125, 125, 255), -1)
+                cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 125, 255), -1)
             elif j == 1:
-                cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (125, 255, 125), -1)
+                cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 255, 125), -1)
             else:
-                cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (255, 125, 125), -1)
-
-    cv2.imwrite(path, im_show0)
+                cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (255, 125, 125), -1)
 
     for idx, py in enumerate(py_preds):
-        im_show = im_show0.copy()
         contours = py.data.cpu().numpy()
         cv2.drawContours(im_show, contours.astype(np.int32), -1, (0, 255, 255), 2)
         for ppts in contours:
+            bounding_boxes.append(cv2.boundingRect(ppts.astype(np.int32)))  # Get bounding box
             for j, pp in enumerate(ppts):
                 if j == 0:
                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 125, 255), -1)
@@ -194,65 +188,110 @@ def visualize_detection(image, output_dict, meta=None):
                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 255, 125), -1)
                 else:
                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (255, 125, 125), -1)
-        if cfg.mid:
-            for ppt in midline:
-                for pt in ppt:
-                    cv2.circle(im_show, (int(pt[0]), int(pt[1])), 3, (255, 0, 0), -1)
 
-        path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
-                             meta['image_id'][0].split(".")[0] + "_{}iter.png".format(idx))
-        cv2.imwrite(path, im_show)
-        shows.append(im_show)
-
-    # init_py = init_polys.data.cpu().numpy()
-    # im_show_score = image_show.copy()
-    # for in_py in init_py:
-    #     mask = np.zeros_like(cls_preds[0], dtype=np.uint8)
-    #     cv2.drawContours(mask, [in_py.astype(np.int32)], -1, (1,), -1)
-    #     score = cls_preds[0][mask > 0].mean()
-    #     if score > 0.9:
-    #         cv2.drawContours(im_show_score, [in_py.astype(np.int32)], -1, (0, 255, 0), 2)
-    #     else:
-    #         cv2.drawContours(im_show_score, [in_py.astype(np.int32)], -1, (255, 0, 255), 2)
-    #     cv2.putText(im_show_score, "{:.2f}".format(score),
-    #                 (int(np.mean(in_py[:, 0])), int(np.mean(in_py[:, 1]))), 1, 1, (0, 255, 255), 2)
-    #     print(score)
-
-    # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
-    #                     meta['image_id'][0].split(".")[0] + "init.png")
-    # cv2.imwrite(path, im_show_score)
-
-    show_img = np.concatenate(shows, axis=1)
-    show_boundary = cv2.resize(show_img, (320 * len(py_preds), 320))
-
-    # fig = plt.figure(figsize=(5, 4))
-    # ax1 = fig.add_subplot(111)
-    # # ax1.set_title('distance_field')
-    # ax1.set_autoscale_on(True)
-    # im1 = ax1.imshow(cls_preds[0], cmap=cm.jet)
-    # plt.colorbar(im1, shrink=0.75)
-    # plt.axis("off")
-    # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
-    #                     meta['image_id'][0].split(".")[0] + "_cls.png")
-    # plt.savefig(path, dpi=300)
-    # plt.close(fig)
-    #
-    # fig = plt.figure(figsize=(5, 4))
-    # ax1 = fig.add_subplot(111)
-    # # ax1.set_title('distance_field')
-    # ax1.set_autoscale_on(True)
-    # im1 = ax1.imshow(np.array(cls_preds[1] / np.max(cls_preds[1])), cmap=cm.jet)
-    # plt.colorbar(im1, shrink=0.75)
-    # plt.axis("off")
-    # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
-    #                     meta['image_id'][0].split(".")[0] + "_dis.png")
-    # plt.savefig(path, dpi=300)
-    # plt.close(fig)
-
-    cls_pred = cav.heatmap(np.array(cls_preds[0] * 255, dtype=np.uint8))
-    dis_pred = cav.heatmap(np.array(cls_preds[1] * 255, dtype=np.uint8))
-
-    heat_map = np.concatenate([cls_pred*255, dis_pred*255], axis=1)
-    heat_map = cv2.resize(heat_map, (320 * 2, 320))
-
-    return show_boundary, heat_map
+    return im_show, bounding_boxes
+# def visualize_detection(image, output_dict, meta=None):
+#     image_show = image.copy()
+#     image_show = np.ascontiguousarray(image_show[:, :, ::-1])
+#
+#     cls_preds = F.interpolate(output_dict["fy_preds"], scale_factor=cfg.scale, mode='bilinear')
+#     cls_preds = cls_preds[0].data.cpu().numpy()
+#
+#     py_preds = output_dict["py_preds"][1:]
+#     init_polys = output_dict["py_preds"][0]
+#     shows = []
+#
+#     if cfg.mid:
+#         midline = output_dict["midline"]
+#
+#     init_py = init_polys.data.cpu().numpy()
+#     path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
+#                         meta['image_id'][0].split(".")[0] + "_init.png")
+#
+#     im_show0 = image_show.copy()
+#     for i, bpts in enumerate(init_py.astype(np.int32)):
+#         cv2.drawContours(im_show0, [bpts.astype(np.int32)], -1, (255, 0, 255), 2)
+#         for j, pp in enumerate(bpts):
+#             if j == 0:
+#                 cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (125, 125, 255), -1)
+#             elif j == 1:
+#                 cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (125, 255, 125), -1)
+#             else:
+#                 cv2.circle(im_show0, (int(pp[0]), int(pp[1])), 3, (255, 125, 125), -1)
+#
+#     cv2.imwrite(path, im_show0)
+#
+#     for idx, py in enumerate(py_preds):
+#         im_show = im_show0.copy()
+#         contours = py.data.cpu().numpy()
+#         cv2.drawContours(im_show, contours.astype(np.int32), -1, (0, 255, 255), 2)
+#         for ppts in contours:
+#             for j, pp in enumerate(ppts):
+#                 if j == 0:
+#                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 125, 255), -1)
+#                 elif j == 1:
+#                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (125, 255, 125), -1)
+#                 else:
+#                     cv2.circle(im_show, (int(pp[0]), int(pp[1])), 3, (255, 125, 125), -1)
+#         if cfg.mid:
+#             for ppt in midline:
+#                 for pt in ppt:
+#                     cv2.circle(im_show, (int(pt[0]), int(pt[1])), 3, (255, 0, 0), -1)
+#
+#         path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
+#                              meta['image_id'][0].split(".")[0] + "_{}iter.png".format(idx))
+#         cv2.imwrite(path, im_show)
+#         shows.append(im_show)
+#
+#     # init_py = init_polys.data.cpu().numpy()
+#     # im_show_score = image_show.copy()
+#     # for in_py in init_py:
+#     #     mask = np.zeros_like(cls_preds[0], dtype=np.uint8)
+#     #     cv2.drawContours(mask, [in_py.astype(np.int32)], -1, (1,), -1)
+#     #     score = cls_preds[0][mask > 0].mean()
+#     #     if score > 0.9:
+#     #         cv2.drawContours(im_show_score, [in_py.astype(np.int32)], -1, (0, 255, 0), 2)
+#     #     else:
+#     #         cv2.drawContours(im_show_score, [in_py.astype(np.int32)], -1, (255, 0, 255), 2)
+#     #     cv2.putText(im_show_score, "{:.2f}".format(score),
+#     #                 (int(np.mean(in_py[:, 0])), int(np.mean(in_py[:, 1]))), 1, 1, (0, 255, 255), 2)
+#     #     print(score)
+#
+#     # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
+#     #                     meta['image_id'][0].split(".")[0] + "init.png")
+#     # cv2.imwrite(path, im_show_score)
+#
+#     show_img = np.concatenate(shows, axis=1)
+#     show_boundary = cv2.resize(show_img, (320 * len(py_preds), 320))
+#
+#     # fig = plt.figure(figsize=(5, 4))
+#     # ax1 = fig.add_subplot(111)
+#     # # ax1.set_title('distance_field')
+#     # ax1.set_autoscale_on(True)
+#     # im1 = ax1.imshow(cls_preds[0], cmap=cm.jet)
+#     # plt.colorbar(im1, shrink=0.75)
+#     # plt.axis("off")
+#     # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
+#     #                     meta['image_id'][0].split(".")[0] + "_cls.png")
+#     # plt.savefig(path, dpi=300)
+#     # plt.close(fig)
+#     #
+#     # fig = plt.figure(figsize=(5, 4))
+#     # ax1 = fig.add_subplot(111)
+#     # # ax1.set_title('distance_field')
+#     # ax1.set_autoscale_on(True)
+#     # im1 = ax1.imshow(np.array(cls_preds[1] / np.max(cls_preds[1])), cmap=cm.jet)
+#     # plt.colorbar(im1, shrink=0.75)
+#     # plt.axis("off")
+#     # path = os.path.join(cfg.vis_dir, '{}_test'.format(cfg.exp_name),
+#     #                     meta['image_id'][0].split(".")[0] + "_dis.png")
+#     # plt.savefig(path, dpi=300)
+#     # plt.close(fig)
+#
+#     cls_pred = cav.heatmap(np.array(cls_preds[0] * 255, dtype=np.uint8))
+#     dis_pred = cav.heatmap(np.array(cls_preds[1] * 255, dtype=np.uint8))
+#
+#     heat_map = np.concatenate([cls_pred*255, dis_pred*255], axis=1)
+#     heat_map = cv2.resize(heat_map, (320 * 2, 320))
+#
+#     return show_boundary, heat_map

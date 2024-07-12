@@ -27,14 +27,16 @@ class BaseOptions(object):
         self.parser = argparse.ArgumentParser()
 
         # basic opts
-        self.parser.add_argument('--exp_name', default="TD500", type=str,
-                                 choices=['Synthtext', 'Totaltext', 'Ctw1500','Icdar2015', 'Totaltext_mid', 'Ctw1500_mid','TD500HUST_mid','ArT_mid',
-                                          "MLT2017", 'TD500HUST', "MLT2019", "ArT", "ALL","preSynthMLT","preALL"], help='Experiment name')
+        self.parser.add_argument('--exp_name', default="Totaltext_mid", type=str,
+                                 choices=['Synthtext', 'ArT_mid', 'Ctw1500', 'Icdar2015', 'Totaltext_mid',
+                                          'Ctw1500_mid', 'TD500HUST_mid', 'ArT_mid',
+                                          "MLT2017", 'TD500HUST', "MLT2019", "ArT", "ALL", "preSynthMLT", "preALL"],
+                                 help='Experiment name')
         self.parser.add_argument('--resume', default=None, type=str, help='Path to target resume checkpoint')
         self.parser.add_argument('--num_workers', default=0, type=int, help='Number of workers used in dataloading')
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
         self.parser.add_argument('--mgpu', action='store_true', help='Use multi-gpu to train model')
-        self.parser.add_argument('--save_dir', default='./model/', help='Path to save checkpoint models')
+        self.parser.add_argument('--save_dir', default='../Models/Text_detection', help='Path to save checkpoint models')
         self.parser.add_argument('--vis_dir', default='./vis/', help='Path to save visualization images')
         self.parser.add_argument('--log_dir', default='./logs/', help='Path to tensorboard log')
         self.parser.add_argument('--loss', default='CrossEntropyLoss', type=str, help='Training Loss')
@@ -64,26 +66,27 @@ class BaseOptions(object):
         # backbone
         self.parser.add_argument('--scale', default=1, type=int, help='prediction on 1/scale feature map')
         self.parser.add_argument('--net', default='FSNet_M', type=str,
-                                 choices=["FSNet_M", "FSNet_S","FSNet_hor"],
+                                 choices=["FSNet_M", "FSNet_S", "FSNet_hor"],
                                  help='Network architecture')
-        self.parser.add_argument('--mid', default=False, type=str2bool, help='midline predict to Transformer')
+        self.parser.add_argument('--mid', default=True, type=str2bool, help='midline predict to Transformer')
         self.parser.add_argument('--embed', default=False, type=str2bool, help='predict embeding value for training')
         self.parser.add_argument('--know', default=False, type=str2bool, help='Knowledge Distillation')
-        self.parser.add_argument('--onlybackbone', default=False, type=str2bool, help='skip the Transformer block, only train the FSNet. ')
+        self.parser.add_argument('--onlybackbone', default=False, type=str2bool,
+                                 help='skip the Transformer block, only train the FSNet. ')
         # data args
         self.parser.add_argument('--load_memory', default=False, type=str2bool, help='Load data into memory')
         self.parser.add_argument('--rescale', type=float, default=255.0, help='rescale factor')
         self.parser.add_argument('--input_size', default=640, type=int, help='model input size')
-        self.parser.add_argument('--test_size', default=[640, 960], type=int, nargs='+', help='test size')
+        self.parser.add_argument('--test_size', default=[640, 1024], type=int, nargs='+', help='test size')
 
         # eval args00
-        self.parser.add_argument('--checkepoch', default=1070, type=int, help='Load checkpoint number')
+        self.parser.add_argument('--checkepoch', default=622, type=int, help='Load checkpoint number')
         self.parser.add_argument('--start_epoch', default=0, type=int, help='start epoch number')
-        self.parser.add_argument('--cls_threshold', default=0.875, type=float, help='threshold of pse')
-        self.parser.add_argument('--dis_threshold', default=0.35, type=float, help='filter the socre < score_i')
+        self.parser.add_argument('--cls_threshold', default=0.85, type=float, help='threshold of pse')
+        self.parser.add_argument('--dis_threshold', default=0.3, type=float, help='filter the socre < score_i')
 
         # demo args
-        self.parser.add_argument('--img_root', default=None,   type=str, help='Path to deploy images')
+        self.parser.add_argument('--img_root', default=None, type=str, help='Path to deploy images')
 
     def parse(self, fixed=None):
 
